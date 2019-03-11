@@ -14,6 +14,16 @@
 @optional
 @end
 
+@protocol CustomModel
+@required
++ (void)registerCloudModelSource:(NSDictionary *)options;
++ (void)run:(NSString *)cloudModelName
+       options:(NSDictionary *)options
+    inputBytes:(FlutterStandardTypedData *)inputBytes
+        result:(FlutterResult)result;
+@optional
+@end
+
 @interface BarcodeDetector : NSObject <Detector>
 @end
 
@@ -27,4 +37,7 @@
 @end
 
 @interface TextRecognizer : NSObject <Detector>
+@end
+
+@interface CustomModel : NSObject <CustomModel>
 @end

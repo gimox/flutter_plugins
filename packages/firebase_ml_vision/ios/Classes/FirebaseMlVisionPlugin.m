@@ -1,4 +1,5 @@
 #import "FirebaseMlVisionPlugin.h"
+#import "Firebase/Firebase.h"
 
 static FlutterError *getFlutterError(NSError *error) {
   return [FlutterError errorWithCode:[NSString stringWithFormat:@"Error %d", (int)error.code]
@@ -32,20 +33,33 @@ static FlutterError *getFlutterError(NSError *error) {
 }
 
 - (void)handleMethodCall:(FlutterMethodCall *)call result:(FlutterResult)result {
-  FIRVisionImage *image = [self dataToVisionImage:call.arguments];
-  NSDictionary *options = call.arguments[@"options"];
-  if ([@"BarcodeDetector#detectInImage" isEqualToString:call.method]) {
-    [BarcodeDetector handleDetection:image options:options result:result];
-  } else if ([@"FaceDetector#processImage" isEqualToString:call.method]) {
-    [FaceDetector handleDetection:image options:options result:result];
-  } else if ([@"LabelDetector#detectInImage" isEqualToString:call.method]) {
-    [LabelDetector handleDetection:image options:options result:result];
-  } else if ([@"CloudLabelDetector#detectInImage" isEqualToString:call.method]) {
-    [CloudLabelDetector handleDetection:image options:options result:result];
-  } else if ([@"TextRecognizer#processImage" isEqualToString:call.method]) {
-    [TextRecognizer handleDetection:image options:options result:result];
+  if ([@"CloudModel#run" isEqualToString:call.method]) {
+    NSString *cloudModelName = call.arguments[@"cloudModelName"];
+    NSDictionary *options = call.arguments[@"inputOutputOptions"];
+    FlutterStandardTypedData *inputBytes = call.arguments[@"inputBytes"];
+    [CustomModel run:cloudModelName options:options inputBytes:inputBytes result:result];
+
+  } else if ([@"CloudModel#registerCloudModelSource" isEqualToString:call.method]) {
+    NSDictionary *options = call.arguments[@"options"];
+    [CustomModel registerCloudModelSource:options];
+
   } else {
-    result(FlutterMethodNotImplemented);
+    FIRVisionImage *image = [self dataToVisionImage:call.arguments];
+    NSDictionary *options = call.arguments[@"options"];
+
+    if ([@"BarcodeDetector#detectInImage" isEqualToString:call.method]) {
+      [BarcodeDetector handleDetection:image options:options result:result];
+    } else if ([@"FaceDetector#processImage" isEqualToString:call.method]) {
+      [FaceDetector handleDetection:image options:options result:result];
+    } else if ([@"LabelDetector#detectInImage" isEqualToString:call.method]) {
+      [LabelDetector handleDetection:image options:options result:result];
+    } else if ([@"CloudLabelDetector#detectInImage" isEqualToString:call.method]) {
+      [CloudLabelDetector handleDetection:image options:options result:result];
+    } else if ([@"TextRecognizer#processImage" isEqualToString:call.method]) {
+      [TextRecognizer handleDetection:image options:options result:result];
+    } else {
+      result(FlutterMethodNotImplemented);
+    }
   }
 }
 

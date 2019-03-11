@@ -57,6 +57,9 @@ class FirebaseVision {
   CloudLabelDetector cloudLabelDetector([CloudDetectorOptions options]) {
     return CloudLabelDetector._(options ?? const CloudDetectorOptions());
   }
+
+  /// Creates an instance of [CustomModel].
+  CustomModel customModel() => CustomModel._();
 }
 
 /// Represents an image object used for both on-device and cloud API detectors.
