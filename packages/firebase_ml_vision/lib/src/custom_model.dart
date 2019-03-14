@@ -10,7 +10,7 @@ class CustomModel {
   Future<List<dynamic>> run(
       String cloudModelName,
       FirebaseModelInputOutputOptions options,
-      img.Image image,
+      dynamic image,
       int width,
       int height) async {
     try {
@@ -20,7 +20,7 @@ class CustomModel {
       //TODO image must be squared
       /// prepare image
       final FirebaseCustomModelPayload customModelPayload =
-          FirebaseCustomModelPayload(image, options.inputDims[1],
+          await FirebaseCustomModelPayload(image, options.inputDims[1],
               isFloat: isFloat, width: width, height: height);
       final Uint8List imageBytes =
           ImageManipulationUtils().prepareAnalysis(customModelPayload);
@@ -185,7 +185,7 @@ class FirebaseCustomModelPayload {
   FirebaseCustomModelPayload(this.image, this.desiredSize,
       {this.isFloat = false, this.width, this.height});
 
-  final img.Image image;
+  final dynamic image;
   final int desiredSize; // square image (i.e. 224 stays for 224x224)
   final bool isFloat;
   final int width;
@@ -193,11 +193,23 @@ class FirebaseCustomModelPayload {
 }
 
 class ImageManipulationUtils {
-  Uint8List prepareAnalysis(FirebaseCustomModelPayload payload) {
+  Future<Uint8List> prepareAnalysis(FirebaseCustomModelPayload payload) async {
     img.Image resized;
 
+    // format conversion
     if (payload.image != null) {
-      resized = payload.image;
+      if (payload.image is img.Image) {
+        resized = payload.image;
+      } else if (payload.image is CameraImage) {
+        if (payload.image.format.group == ImageFormatGroup.yuv420) {
+          resized = await convertYUV420toImageColor(payload.image);
+        } else if (payload.image.format.group == ImageFormatGroup.bgra8888) {
+          resized = await convertBGRA8888toImageColor(payload.image);
+        } else {
+          print('Unknow camera format');
+          throw Error();
+        }
+      }
     } else {
       throw Error();
     }
@@ -210,6 +222,71 @@ class ImageManipulationUtils {
     return (payload.isFloat)
         ? imageToByteListFloat(resized, payload.desiredSize)
         : imageToByteList(resized, payload.desiredSize);
+  }
+
+  Future<img.Image> convertBGRA8888toImageColor(CameraImage cameraImage) async {
+    try {
+      debugPrint(
+          "Processing image ABGR888 ${cameraImage.width} x ${cameraImage.height}...");
+
+      var rawImgBytes = cameraImage.planes[0].bytes;
+      debugPrint("Raw bytes length: ${rawImgBytes.length}");
+
+      var convertedImg = img.Image(
+          cameraImage.width, cameraImage.height); // Create Image buffer
+      for (int x = 0; x < cameraImage.width; x++) {
+        for (int y = 0; y < cameraImage.height; y++) {
+          final int index = y * cameraImage.width + x;
+          int b = ((rawImgBytes[index] >> 16) & 0xFF).clamp(0, 255);
+          int g = ((rawImgBytes[index] >> 8) & 0xFF).clamp(0, 255);
+          int r = (rawImgBytes[index] & 0xFF).clamp(0, 255);
+          convertedImg.setPixelRGBA(x, y, r, g, b);
+        }
+      }
+      debugPrint("Img format (RGB: 3, RGBA: 4): ${convertedImg.format}");
+      return convertedImg;
+    } catch (e) {
+      print("ERROR:" + e.toString());
+    }
+    return null;
+  }
+
+  Future<img.Image> convertYUV420toImageColor(CameraImage cameraImage) async {
+    try {
+      final int uvRowStride = cameraImage.planes[1].bytesPerRow;
+      final int uvPixelStride = cameraImage.planes[1].bytesPerPixel;
+      debugPrint(
+          "Processing image YUV420 ${cameraImage.width} x ${cameraImage.height}...");
+      print("uvRowStride: " + uvRowStride.toString());
+      print("uvPixelStride: " + uvPixelStride.toString());
+
+      var convertedImg = img.Image(
+          cameraImage.width, cameraImage.height); // Create Image buffer
+
+      // Fill image buffer with plane[0] from YUV420_888
+      for (int x = 0; x < cameraImage.width; x++) {
+        for (int y = 0; y < cameraImage.height; y++) {
+          final int uvIndex =
+              uvPixelStride * (x / 2).floor() + uvRowStride * (y / 2).floor();
+          final int index = y * cameraImage.width + x;
+
+          final yp = cameraImage.planes[0].bytes[index];
+          final up = cameraImage.planes[1].bytes[uvIndex];
+          final vp = cameraImage.planes[2].bytes[uvIndex];
+          // Calculate pixel color
+          int r = (yp + vp * 1436 / 1024 - 179).round().clamp(0, 255);
+          int g = (yp - up * 46549 / 131072 + 44 - vp * 93604 / 131072 + 91)
+              .round()
+              .clamp(0, 255);
+          int b = (yp + up * 1814 / 1024 - 227).round().clamp(0, 255);
+          convertedImg.setPixelRGBA(x, y, r, g, b);
+        }
+      }
+      return convertedImg;
+    } catch (e) {
+      print("ERROR:" + e.toString());
+    }
+    return null;
   }
 
   Uint8List imageToByteListFloat(img.Image image, int desideredSize) {

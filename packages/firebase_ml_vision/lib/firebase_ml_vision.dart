@@ -12,6 +12,7 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
+import 'package:camera/camera.dart';
 
 part 'src/barcode_detector.dart';
 part 'src/face_detector.dart';
