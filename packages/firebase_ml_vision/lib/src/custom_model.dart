@@ -7,13 +7,6 @@ part of firebase_ml_vision;
 class CustomModel {
   CustomModel._();
 
-  Future<dynamic> myTest() async {
-    final dynamic replay = await FirebaseVision.channel
-        .invokeMethod<dynamic>('CustomModel#myTest');
-
-    return replay;
-  }
-
   Future<List<dynamic>> run(
       String cloudModelName,
       FirebaseModelInputOutputOptions options,
@@ -122,9 +115,9 @@ class FirebaseModelDataType {
 //   https://firebase.google.com/docs/reference/android/com/google/firebase/ml/custom/model/FirebaseLocalModelSource
 class FirebaseLocalModelSource {
   FirebaseLocalModelSource({
-    @required this.modelName,
-    @required this.filePath,
-    @required this.assetFilePath,
+    this.modelName,
+    this.filePath,
+    this.assetFilePath,
   });
 
   final String modelName;
@@ -144,7 +137,7 @@ class FirebaseLocalModelSource {
 //   https://firebase.google.com/docs/reference/android/com/google/firebase/ml/custom/model/FirebaseCloudModelSource
 class FirebaseCloudModelSource {
   FirebaseCloudModelSource(
-      {@required this.modelName,
+      {this.modelName,
       this.enableModelUpdates = false,
       this.initialDownloadConditions = _defaultCondition,
       this.updatesDownloadConditions = _defaultCondition});
@@ -193,7 +186,7 @@ class FirebaseCustomModelPayload {
       {this.isFloat = false, this.width, this.height});
 
   final img.Image image;
-  final int desiredSize;
+  final int desiredSize; // square image (i.e. 224 stays for 224x224)
   final bool isFloat;
   final int width;
   final int height;
